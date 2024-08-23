@@ -25,4 +25,5 @@
 go.work
 requirements.txt
 learn.txt
+test.go
 # End of https://www.toptal.com/developers/gitignore/api/go

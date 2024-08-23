@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,4 +71,41 @@ func CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 			"note": newNote,
 		},
 	})
+}
+
+func FindNoteById(w http.ResponseWriter, r *http.Request) {
+	noteId := r.PathValue("noteId")
+	var note Note
+	result := DB.First(&note, "id=?", noteId)
+	if err := result.Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			response := map[string]string{
+				"status":  "failed",
+				"message": fmt.Sprintf("Note with id %v was not found", noteId),
+			}
+			json.NewEncoder(w).Encode(response)
+		}
+
+		w.WriteHeader(http.StatusBadGateway)
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"status":  "failed",
+			"message": result.Error.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// note was found
+	response := map[string]interface{}{
+		"status": "success",
+		"data": map[string]interface{}{
+			"note": note,
+		},
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 }
