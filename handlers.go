@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,6 +72,36 @@ func CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 			"note": newNote,
 		},
 	})
+}
+func FindNotes(w http.ResponseWriter, r *http.Request) {
+	page := r.URL.Query().Get("page")
+	limit := r.URL.Query().Get("limit")
+	intPage, err := strconv.Atoi(page)
+	if err != nil {
+		http.Error(w, "invalid page parameter", http.StatusBadRequest)
+	}
+	intLimit, err := strconv.Atoi(limit)
+	if err != nil {
+		http.Error(w, "invalid limit parameter", http.StatusBadRequest)
+	}
+	offset := (intPage - 1) * intLimit
+	var notes []Note
+	result := DB.Limit(intLimit).Offset(offset).Find(&notes)
+	if err = result.Error; err != nil {
+		http.Error(w, result.Error.Error(), http.StatusBadGateway)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":  "success",
+		"results": len(notes),
+		"data": map[string]interface{}{
+			"notes": notes,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func FindNoteById(w http.ResponseWriter, r *http.Request) {
